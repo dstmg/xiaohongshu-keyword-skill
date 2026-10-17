@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import re
+from analyze_research import analyze
 
 
 def atomic(path, text):
@@ -58,7 +60,7 @@ def render(store):
         mapping = {}
         for root in batch['capture']['roots']:
             qs, complete = root_queries(batch['capture'], root)
-            item = dict(queries=qs, complete=complete, batch=batch['id'])
+            item = dict(queries=qs, complete=complete, batch=batch['id'], analysis=analyze(root, qs, store.get('agent_analysis', {}).get(batch['id'], {}).get(root)))
             mapping[root] = item
             if complete or root not in roots or not roots[root]['complete']:
                 roots[root] = item
@@ -67,7 +69,11 @@ def render(store):
     assets = Path(__file__).resolve().parent.parent / 'assets'
     payload = json.dumps(dict(roots=roots, batches=batches), ensure_ascii=False).replace('<', '\\u003c')
     template = (assets / 'research.html').read_text(encoding='utf-8')
-    return template.replace('__CSS__', (assets / 'research.css').read_text(encoding='utf-8')).replace('__JS__', (assets / 'research.js').read_text(encoding='utf-8')).replace('__DATA__', payload)
+    template = re.sub(r'<section id="actions".*?</section>', '<section id="actions" class="pane"><div class="section-head"><h2>运营建议</h2><span class="badge" id="analysisStatus"></span></div><p class="hint" id="analysisSummary"></p><div class="action-grid" id="analysisCards"></div><div class="table-wrap" id="analysisTable"></div></section>', template, flags=re.S)
+    template = template.replace('<p>待解读：采集词条与运营判断分开保存，不自动套用其他品类结论。</p>', '<p id="analysisNote"></p>')
+    js = (assets / 'analysis.js').read_text(encoding='utf-8') + '\n' + (assets / 'research.js').read_text(encoding='utf-8')
+    js = js.replace('renderRows();requestAnimationFrame(draw)', 'renderRows();renderAnalysis(entries);requestAnimationFrame(draw)').replace('采集完整 · 待解读', '采集完整 · 已生成初步分析').replace('含未完成采集 · 待解读', '采集未完成 · 已分析现有词')
+    return template.replace('__CSS__', (assets / 'research.css').read_text(encoding='utf-8')).replace('__JS__', js).replace('__DATA__', payload)
 
 
 def append(project, capture):
@@ -78,8 +84,14 @@ def append(project, capture):
     project.mkdir(parents=True, exist_ok=True)
     state = project / 'research-project.json'
     store = json.loads(state.read_text(encoding='utf-8')) if state.exists() else {'version': 1, 'batches': []}
+    agent_file = project / 'agent-analysis.json'
+    if agent_file.exists():
+        store['agent_analysis'] = json.loads(agent_file.read_text(encoding='utf-8-sig'))
     digest = hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:20]
     if any(b['id'] == digest for b in store['batches']):
+        page = render(store)
+        atomic(state, json.dumps(store, ensure_ascii=False, indent=2))
+        atomic(project / '小红书关键词研究.html', page)
         return 'duplicate: no change'
     # Copy evidence under immutable content-addressed names before rendering.
     for q in data['queries']:

@@ -13,3 +13,5 @@ jobs:
       - run: python scripts/check_workbook.py
       - run: python scripts/check_ecommerce.py
       - run: python scripts/check_baking.py
+      - run: python scripts/check_research_project.py
+      - run: python scripts/check_analysis.py

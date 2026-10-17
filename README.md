@@ -59,7 +59,7 @@ python scripts/research_project.py --project "我的关键词研究" --input "�
 
 每轮沿用同一个 `--project` 目录，固定更新 `小红书关键词研究.html`。只有想建立独立研究时才换一个项目目录。报告沿用清爽蓝紫风格，支持词根/全部词根、历史批次、关键词筛选、柱图与数据表、截图证据。第三方网页与真实登录截图未随仓库提供。
 
-同一批 JSON 重复导入不新增批次；失败批次不会替换此前完整批次。原始记录保存于 `research-project.json`，截图按内容去重。新词默认“待解读”，不自动捏造运营结论。分享完整项目文件夹才包含截图，公开前务必人工脱敏。详见 [研究项目规则](references/research-project.md)。
+同一批 JSON 重复导入不新增批次，但会重建报告以应用最新分析与模板；失败批次不会替换此前完整批次。原始记录保存于 `research-project.json`，截图按内容去重。默认自动附逐词规则初步分析；执行技能的Agent会继续阅读本批词并生成带来源的综合解读，写入同一HTML，不需要用户再次提出分析要求。无商品资料时给待验证研究方向，不编造产品事实。只有明确要求只采集时跳过。详见[自动分析规程](references/automatic-analysis.md)。分享截图需带项目文件夹并人工脱敏。
 
 ```bash
 python scripts/check_research_project.py
